@@ -1,0 +1,115 @@
+{# templates/explore.html #}
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Prozkoumat{% endblock %}
+
+{% block content %}
+  <div class="container py-4">
+    {# Search bar #}
+    <form method="get" action="{% url 'explore_search' %}" class="mb-4">
+      <div class="input-group">
+        <input
+          type="text"
+          name="q"
+          value="{{ request.GET.q|default_if_none:'' }}"
+          class="form-control"
+          placeholder="Hledat uživatele…">
+        <button class="btn btn-outline-secondary" type="submit">
+          <i class="bi bi-search"></i>
+        </button>
+      </div>
+    </form>
+
+    {# --- detail --- #}
+    {% if selected_post %}
+      <div class="position-relative mb-5">
+        <a href="{% url 'explore' %}"
+           class="position-absolute top-0 start-0 m-3 text-decoration-none fs-2 {% if user.profile.dark_mode %}text-white{% else %}text-dark{% endif %}">
+          &times;
+        </a>
+
+        <div class="card mb-3 {% if user.profile.dark_mode %}bg-secondary text-white{% endif %}">
+          <img src="{{ selected_post.image.url }}" class="card-img-top" alt="Post">
+          <div class="card-body p-2">
+            <div class="d-flex align-items-center mb-2">
+              <!-- LIKE button -->
+              <a href="javascript:;" class="me-2 toggle-like" data-post-id="{{ selected_post.id }}">
+                <i class="bi {{ selected_post.is_liked|yesno:'bi-heart-fill,bi-heart' }} fs-4"></i>
+              </a>
+              <span class="me-4">{{ selected_post.likes_count }}</span>
+              <div class="ms-auto">
+                <a href="#" class="text-decoration-none"><i class="bi bi-bookmark fs-4"></i></a>
+              </div>
+            </div>
+            <h5 class="card-title">
+              <a href="{% url 'profile' selected_post.author.user.username %}">
+                {{ selected_post.author.user.username }}
+              </a>
+            </h5>
+            <small class="text-muted">{{ selected_post.created_at|date:"j. n. Y H:i" }}</small>
+
+            {# komentáře #}
+            <div class="mt-3" style="max-height:300px; overflow:auto;">
+              {% for comment in selected_post.comments.all %}
+                <div class="mb-2">
+                  <strong>{{ comment.user.username }}</strong> {{ comment.text }}<br>
+                  <small class="text-muted">{{ comment.created_at|timesince }} předtím</small>
+                </div>
+              {% empty %}
+                <p class="text-muted">Žádné komentáře.</p>
+              {% endfor %}
+            </div>
+
+            {# form pro komentář #}
+            {% if comment_form %}
+              <form action="{% url 'add_comment' selected_post.id %}" method="post" class="d-flex mt-2">
+                {% csrf_token %}
+                {{ comment_form.text }}
+                <button type="submit" class="btn btn-primary btn-sm ms-2">Přidat</button>
+              </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    {# --- grid explore --- #}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
+      {% for post in posts %}
+        <div class="col">
+          <a href="{% url 'explore_post' post.pk %}" class="text-decoration-none">
+            <div class="card">
+              <img src="{{ post.image.url }}"
+                   class="card-img-top"
+                   alt="Post #{{ post.pk }}"
+                   style="aspect-ratio: 1; object-fit: cover;">
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.toggle-like').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const postId = btn.dataset.postId;
+      const res = await fetch("{% url 'toggle_like' 0 %}".replace('0', postId), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      btn.nextElementSibling.textContent = data.likes_count;
+      const icon = btn.querySelector('i');
+      icon.classList.toggle('bi-heart-fill', data.liked);
+      icon.classList.toggle('bi-heart', !data.liked);
+    });
+  });
+</script>
+{% endblock %}

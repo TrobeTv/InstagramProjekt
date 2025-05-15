@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+  <form action="{% url 'explore_search' %}" method="get" class="mb-4">
+    <div class="input-group">
+      <input
+        type="text"
+        name="q"
+        class="form-control"
+        placeholder="Hledat uživatele…"
+        value="{{ query }}">
+      <button class="btn btn-outline-secondary" type="submit">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </form>
+
+  {% if query %}
+    <h5>Výsledky pro „{{ query }}“:</h5>
+    {% if users %}
+      <ul class="list-group mt-2">
+        {% for u in users %}
+          <li class="list-group-item d-flex align-items-center">
+            <a href="{% url 'profile' u.username %}"
+               class="d-flex align-items-center text-decoration-none w-100">
+              <img
+                src="{{ u.profile.avatar.url }}"
+                onerror='this.onerror=null; this.src="{% static "img/default-avatar.png" %}"'
+                class="rounded-circle me-3"
+                width="40" height="40"
+                alt="Avatar">
+              <div>
+                <strong>{{ u.username }}</strong><br>
+                <small class="text-muted">{{ u.profile.display_name }}</small>
+              </div>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-muted">Žádní uživatelé nevyhovují hledanému výrazu.</p>
+    {% endif %}
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block content %}
+ <div class="position-relative">
+    <a href="{% url 'profile' post.author.user.username %}"
+       class="position-absolute top-0 start-0 m-3 text-decoration-none
+              fs-3 {% if user.profile.dark_mode %}text-white{% else %}text-dark{% endif %}">
+      &times;
+    </a>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-8 col-lg-10">
+                <div class="container-fluid py-4">
+                    <div class="row">
+                        {# levá část: obrázek #}
+                        <div class="col-md-8">
+                          <img src="{{ post.image.url }}"
+                               class="img-fluid w-100 rounded"
+                               alt="Post image">
+                        </div>
+
+                        {# pravá část: sidebar s komentáři#}
+                        <div class="col-md-4">
+                          <div class="card h-100 {% if user.profile.dark_mode %}bg-secondary text-white{% endif %}">
+                            <div class="card-header d-flex align-items-center">
+                              <a href="{% url 'profile' post.author.user.username %}"
+                                 class="me-2 text-decoration-none {% if user.profile.dark_mode %}text-white{% else %}text-dark{% endif %}">
+                                <strong>{{ post.author.user.username }}</strong>
+                              </a>
+                              <small class="text-muted ms-auto">{{ post.created_at|date:"j. n. Y H:i" }}</small>
+                            {% if post.author.user == request.user %}
+                              <a href="{% url 'delete_post' post.pk %}" …>
+                                <i class="bi bi-trash fs-5"></i>
+                              </a>
+                            {% endif %}
+                            </div>
+                            <div class="card-body d-flex flex-column p-2">
+                              <div class="overflow-auto mb-3" style="flex:1;">
+                                {% for comment in comments %}
+                                  <div class="mb-2">
+                                    <strong>{{ comment.user.username }}</strong>
+                                    {{ comment.text }}<br>
+                                    <small class="text-muted">{{ comment.created_at|timesince }} předtím</small>
+                                  </div>
+                                {% empty %}
+                                  <p class="text-muted">Žádné komentáře.</p>
+                                {% endfor %}
+                              </div>
+
+                              {#like, komentáře, sdílení #}
+                              <div class="d-flex align-items-center mb-2">
+                                <form action="{% url 'toggle_like' post.pk %}" method="post" class="me-3">
+                                  {% csrf_token %}
+                                  <button type="submit" class="btn btn-link p-0">
+                                    <i class="bi {% if is_liked %}bi-heart-fill{% else %}bi-heart{% endif %} fs-4"></i>
+                                  </button>
+                                </form>
+                                <span>{{ likes_count }}</span>
+                                <div class="ms-auto">
+                                  <a href="#" class="text-decoration-none"><i class="bi bi-bookmark fs-4"></i></a>
+                                </div>
+                              </div>
+
+                                  {# form pro komentář #}
+                                  <form action="" method="post" class="d-flex">
+                                      {% csrf_token %}
+                                      {{ comment_form.text }}
+                                      <button type="submit" class="btn btn-primary btn-sm ms-2">Přidat</button>
+                                  </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

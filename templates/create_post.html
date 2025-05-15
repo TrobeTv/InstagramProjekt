@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Přidat příspěvek – Instaclone{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+  <h1 class="mb-4">Přidat příspěvek</h1>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+      {{ form.image.label_tag }}
+      {{ form.image }}
+      {% if form.image.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.image.errors.0 }}
+        </div>
+      {% endif %}
+    </div>
+    <div class="mb-3">
+      {{ form.caption.label_tag }}
+      {{ form.caption }}
+      {% if form.caption.errors %}
+        <div class="invalid-feedback d-block">
+          {{ form.caption.errors.0 }}
+        </div>
+      {% endif %}
+    </div>
+    <button type="submit" class="btn btn-primary">Přidat</button>
+  </form>
+</div>
+{% endblock %}

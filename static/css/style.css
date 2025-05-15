@@ -1,0 +1,84 @@
+/* CSS proměnné a dark-mode */
+:root {
+  --bg-color: #fafafa;
+  --text-color: #262626;
+  --card-bg: #fff;
+  --input-bg: #fafafa;
+  --button-bg: #0095f6;
+  --button-color: #fff;
+}
+body.dark-mode {
+  --bg-color: #000;
+  --text-color: #e0e0e0;
+  --card-bg: #1c1c1e;
+  --input-bg: #262629;
+  --button-bg: #0095f6;
+  --button-color: #fff;
+}
+
+/* Globální styl */
+body {
+  background: var(--bg-color);
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Auth karta */
+.auth-card {
+  width: 350px;
+  margin: 60px auto;
+  padding: 40px 20px;
+  background: var(--card-bg);
+  border: 1px solid #dbdbdb;
+  border-radius: 8px;
+}
+
+/* Instagram logo font */
+.auth-card .instagram-logo {
+  font-family: 'Pacifico', cursive;
+  font-size: 42px;
+  text-align: center;
+  margin-bottom: 30px;
+  color: var(--text-color);
+}
+
+/* Form-control override */
+.auth-card .form-control {
+  background: var(--input-bg);
+  border: 1px solid #dbdbdb;
+  border-radius: 4px;
+}
+
+/* Submit button */
+.auth-card .btn-primary {
+  background-color: var(--button-bg);
+  border-color: var(--button-bg);
+  color: var(--button-color);
+  font-weight: 600;
+}
+
+/* Odkaz pod formulářem */
+.auth-card .alt-action {
+  text-align: center;
+  margin-top: 15px;
+  font-size: 14px;
+}
+.auth-card .alt-action a {
+  color: #0095f6;
+  text-decoration: none;
+}
+/* SIDEBAR */
+.sidebar {
+  height: 100vh;
+  background-color: var(--card-bg);
+  border-right: 1px solid #dbdbdb;
+}
+.sidebar .nav-link {
+  color: var(--text-color);
+  font-weight: 500;
+  padding: 10px 20px;
+}
+.sidebar .nav-link:hover,
+.sidebar .nav-link.active {
+  background-color: var(--input-bg);
+}

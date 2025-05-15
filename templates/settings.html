@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}Nastavení – Instaclone{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1>Nastavení profilu</h1>
+  <form id="profile-form" enctype="multipart/form-data" class="mb-4">
+    <div class="mb-3">
+      <label for="bio" class="form-label">Bio</label>
+      <textarea id="bio" name="bio" class="form-control">{{ profile.bio }}</textarea>
+    </div>
+    <div class="mb-3">
+      <label for="avatar" class="form-label">Avatar</label>
+      <input id="avatar" type="file" name="avatar" class="form-control">
+    </div>
+    <button type="submit" class="btn btn-primary">Uložit změny</button>
+  </form>
+
+  <hr>
+  <div class="form-check form-switch">
+    <input class="form-check-input" type="checkbox" id="dark-mode-toggle" {% if profile.dark_mode %}checked{% endif %}>
+    <label class="form-check-label" for="dark-mode-toggle">Dark mode</label>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const csrftoken = '{{ csrf_token }}';
+
+// avatar save
+document.getElementById('profile-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const res = await fetch("{% url 'api_profile_update' %}", {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrftoken},
+    body: fd
+  });
+  if (res.ok) alert('Profil uložen!');
+  else alert('Chyba při ukládání.');
+});
+
+//darkmode
+document.getElementById('dark-mode-toggle').addEventListener('change', async () => {
+  const res = await fetch("{% url 'api_toggle_dark_mode' %}", {
+    method: 'POST',
+    headers: {'X-CSRFToken': csrftoken}
+  });
+  if (res.ok) window.location.reload();
+});
+</script>
+{% endblock %}

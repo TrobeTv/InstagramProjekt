@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <div class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="card shadow-sm" style="max-width: 400px; width: 100%;">
+      <div class="card-body text-center">
+        <i class="bi bi-door-closed display-1 mb-3 text-secondary"></i>
+        <h2 class="card-title mb-3">Odhlášení proběhlo úspěšně</h2>
+        <p class="card-text mb-4">Děkujeme, že jste se u nás zastavili. Kdybyste si to rozmysleli, můžete se znovu přihlásit.</p>
+        <a href="{% url 'login' %}" class="btn btn-primary px-4">Přihlásit se znovu</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}
