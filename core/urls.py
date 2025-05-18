@@ -29,6 +29,7 @@ path('api/', api.urls),
     path('post/<int:pk>/delete/', views.delete_post_view, name='delete_post'),
 path('messages/', views.messages_list_view, name='messages_list'),
     path('messages/<str:username>/', views.conversation_detail_view, name='conversation_detail'),
-path('post/<int:post_id>/toggle-save/', views.toggle_save_post_view, name='toggle_save_post'),
+path('saved/', views.saved_posts_view, name='saved_posts'), # Přidáno/Odkomenováno
+    path('post/<int:post_id>/toggle-save/', views.toggle_save_post_view, name='toggle_save_post'), # Tato cesta by již měla existovat
 
 ]

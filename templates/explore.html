@@ -38,8 +38,10 @@
               </a>
               <span class="me-4">{{ selected_post.likes_count }}</span>
               <div class="ms-auto">
-                <a href="#" class="text-decoration-none"><i class="bi bi-bookmark fs-4"></i></a>
-              </div>
+    <a href="javascript:void(0);" class="text-decoration-none toggle-save-btn" data-post-id="{{ selected_post.id }}">
+        <i class="bi {% if selected_post.is_saved %}bi-bookmark-fill{% else %}bi-bookmark{% endif %} fs-4"></i>
+    </a>
+</div>
             </div>
             <h5 class="card-title">
               <a href="{% url 'profile' selected_post.author.user.username %}">
@@ -92,6 +94,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
   document.querySelectorAll('.toggle-like').forEach(btn => {
     btn.addEventListener('click', async () => {

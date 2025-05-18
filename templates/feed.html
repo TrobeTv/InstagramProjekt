@@ -24,7 +24,9 @@
               <span class="ms-1">{{ post.comments_count }}</span>
             </a>
             <a href="#" class="me-3"><i class="bi bi-send fs-4"></i></a>
-            <a href="#" class="ms-auto"><i class="bi bi-bookmark fs-4"></i></a>
+            <a href="javascript:void(0);" class="ms-auto toggle-save-btn" data-post-id="{{ post.id }}">
+    <i class="bi {% if post.is_saved %}bi-bookmark-fill{% else %}bi-bookmark{% endif %} fs-4"></i>
+</a>
           </div>
 
           <div id="comments-{{ post.id }}" class="mt-3 d-none">
@@ -52,6 +54,7 @@
 {% endblock %}
 
 {% block extra_js %}
+{{ block.super }}
 <script>
   document.querySelectorAll('.toggle-comments').forEach(btn => {
     btn.addEventListener('click', () =>

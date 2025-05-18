@@ -96,6 +96,79 @@ document.getElementById('logout-btn').addEventListener('click', async e => {
 </script>
 
 
-  {% block extra_js %}{% endblock %}
+  {% block extra_js %}
+<script>
+// Uvnitř base.html, v bloku extra_js
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM fully loaded and parsed'); // Test 1
+    const csrftoken = '{{ csrf_token }}';
+    console.log('CSRF Token:', csrftoken); // Test 2
+
+    document.querySelectorAll('.toggle-save-btn').forEach(button => {
+        console.log('Found a toggle-save-btn:', button); // Test 3
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            console.log('Save button clicked!'); // Test 4
+            const postId = button.dataset.postId;
+            console.log('Post ID:', postId); // Test 5
+            if (!postId) return;
+
+            // Dynamické sestavení URL pro toggle_save_post
+            // Předpokládá, že máte URL s názvem 'toggle_save_post'
+            // a že Django URL resolver je dostupný v JS (což typicky není přímo)
+            // Bezpečnější je použít fixní prefix a přidat ID, nebo předat URL z Django
+            // Zde použijeme fixní cestu, jak bylo naznačeno v saved_posts.html
+            const url = `/post/${postId}/toggle-save/`;
+            // Alternativně, pokud byste měli URL definovanou v šabloně pro JS:
+            // const url = "{% url 'toggle_save_post' 0 %}".replace('0', postId);
+
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json', // Není nutné pro tento typ požadavku, ale nevadí
+                    },
+                    // Pro GET_OR_CREATE na serveru není potřeba posílat body
+                });
+
+                if (!response.ok) {
+                    console.error('Chyba při (zrušení) ukládání příspěvku:', response.statusText);
+                    const errorData = await response.json().catch(() => null);
+                    alert(`Chyba: ${errorData ? errorData.error : response.statusText}`);
+                    return;
+                }
+
+                const data = await response.json();
+                const icon = button.querySelector('i');
+
+                if (data.is_saved) {
+                    icon.classList.remove('bi-bookmark');
+                    icon.classList.add('bi-bookmark-fill');
+                } else {
+                    icon.classList.remove('bi-bookmark-fill');
+                    icon.classList.add('bi-bookmark');
+
+                    // Pokud jsme na stránce uložených příspěvků a příspěvek byl odebrán z uložených,
+                    // můžeme ho vizuálně odstranit ze stránky.
+                    if (window.location.pathname.includes('/saved/')) { // Upravte cestu, pokud je jiná
+                        const postCard = button.closest('.col'); // Nebo jiný rodičovský element příspěvku
+                        if (postCard) {
+                            postCard.remove();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Došlo k chybě při komunikaci se serverem:', error);
+                alert('Došlo k chybě. Zkuste to prosím znovu.');
+            }
+        });
+    });
+
+    // Váš existující JavaScript pro like, komentáře atd. může zůstat zde nebo být také refaktorován
+});
+</script>
+{% endblock %}
 </body>
 </html>

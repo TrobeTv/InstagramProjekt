@@ -10,20 +10,27 @@ from .forms import PostForm, CommentForm, ProfileForm, RegistrationForm, Message
 from .models import Post, Profile, Comment, Conversation, Message, SavedPost # << ZDE JE KLÍČOVÝ IMPORT
 
 
-@login_required # <<< PŘIDÁN DEKORÁTOR
+@login_required
 def feed_view(request):
     current_user_profile = request.user.profile
-    profiles_i_follow = current_user_profile.following.all() # Profily, které sleduji
+    profiles_i_follow = current_user_profile.following.all()
+
+    # Subquery pro zjištění, zda je příspěvek uložen přihlášeným uživatelem
+    saved_subquery = SavedPost.objects.filter(
+        post_id=OuterRef('pk'),
+        user_id=request.user.pk
+    )
+    # Subquery pro zjištění, zda je příspěvek lajkován přihlášeným uživatelem (již byste měli mít)
+    liked_subquery = Post.likes.through.objects.filter(
+        post_id=OuterRef('pk'),
+        user_id=request.user.pk
+    )
 
     if not profiles_i_follow.exists():
-        # Pokud uživatel nikoho nesleduje, feed bude prázdný
-        posts = Post.objects.none() # Prázdný QuerySet
+        posts = Post.objects.none()
     else:
-        # Zobrazí příspěvky pouze od profilů, které uživatel sleduje
         posts_query = Post.objects.filter(author__in=profiles_i_follow)
-
-        # Chceme také zahrnout vlastní příspěvky uživatele do feedu?
-        # Pokud ano, odkomentujte a upravte následující řádek:
+        # Případně pokud chcete zahrnout i vlastní příspěvky:
         # posts_query = Post.objects.filter(
         # Q(author__in=profiles_i_follow) | Q(author=current_user_profile)
         # )
@@ -31,20 +38,15 @@ def feed_view(request):
         posts = posts_query.annotate(
             likes_count=Count('likes'),
             comments_count=Count('comments'),
-            is_liked=Exists(
-                Post.likes.through.objects.filter(
-                    post_id=OuterRef('pk'),
-                    user_id=request.user.pk
-                )
-            )
-        ).prefetch_related('comments__user').select_related('author__user').order_by('-created_at')
-        # Přidáno select_related('author__user') pro optimalizaci načítání autora a jeho usera
+            is_liked=Exists(liked_subquery),
+            is_saved=Exists(saved_subquery)  # << PŘIDÁNO
+        ).select_related('author__user').prefetch_related('comments__user').order_by('-created_at')
 
     comment_form = CommentForm()
     return render(request, 'feed.html', {
         'posts': posts,
         'comment_form': comment_form,
-        'feed_type': 'following', # Můžeme přidat proměnnou pro šablonu, kdybychom chtěli odlišit feed
+        'feed_type': 'following',
     })
 
 
@@ -230,9 +232,29 @@ def logout_view(request):
     return render(request, 'logged_out.html')
 
 @login_required
+@login_required
 def post_detail_view(request, pk):
-    post = get_object_or_404(Post.objects.select_related('author__user'), pk=pk)
-    if request.method == 'POST':
+    # Subquery pro zjištění, zda je příspěvek uložen přihlášeným uživatelem
+    saved_subquery = SavedPost.objects.filter(
+        post_id=OuterRef('pk'),
+        user_id=request.user.pk
+    )
+    # Subquery pro zjištění, zda je příspěvek lajkován (již byste měli mít)
+    liked_subquery = Post.likes.through.objects.filter(
+        post_id=OuterRef('pk'),
+        user_id=request.user.pk
+    )
+
+    post = get_object_or_404(
+        Post.objects.annotate(
+            is_saved=Exists(saved_subquery.filter(post_id=OuterRef('pk'))), # Anotace přímo pro jeden post
+            likes_count_annotated=Count('likes'), # Přejmenováno, abychom se vyhnuli konfliktu s post.likes.count() níže
+            is_liked_annotated=Exists(liked_subquery.filter(post_id=OuterRef('pk')))
+        ).select_related('author__user'),
+        pk=pk
+    )
+
+    if request.method == 'POST': # Pro přidání komentáře
         form = CommentForm(request.POST)
         if form.is_valid():
             comment = form.save(commit=False)
@@ -242,26 +264,53 @@ def post_detail_view(request, pk):
             return redirect('post_detail', pk=post.pk)
     else:
         form = CommentForm()
+
     context = {
         'post': post,
         'comments': post.comments.select_related('user').all(),
-        'is_liked': post.likes.filter(pk=request.user.pk).exists(),
-        'likes_count': post.likes.count(),
+        'is_liked': post.is_liked_annotated, # Použijeme anotovanou hodnotu
+        'likes_count': post.likes_count_annotated, # Použijeme anotovanou hodnotu
+        'is_saved': post.is_saved, # << PŘIDÁNO (použijeme anotovanou hodnotu)
         'comment_form': form,
     }
     return render(request, 'post_detail.html', context)
 
 def explore_view(request, post_pk=None):
-    posts = Post.objects.all().order_by('-created_at')
-    selected_post = None
+    # Subquery pro zjištění, zda je příspěvek uložen přihlášeným uživatelem
+    saved_subquery = SavedPost.objects.filter(
+        post_id=OuterRef('pk'),
+        user_id=request.user.pk if request.user.is_authenticated else None # Ochrana pro anonymní uživatele
+    )
+    # Subquery pro lajky (již byste měli mít)
+    liked_subquery = Post.likes.through.objects.filter(
+        post_id=OuterRef('pk'),
+        user_id=request.user.pk if request.user.is_authenticated else None
+    )
+
+    posts_query = Post.objects.all().annotate(
+        is_saved=Exists(saved_subquery), # << PŘIDÁNO pro mřížku
+        is_liked=Exists(liked_subquery), # << PŘIDÁNO pro mřížku (pro konzistenci, pokud byste to tam potřebovali)
+        likes_count=Count('likes')       # << PŘIDÁNO pro mřížku
+    ).order_by('-created_at')
+
+    selected_post_obj = None
     comment_form = None
+
     if post_pk is not None:
-        selected_post = get_object_or_404(Post, pk=post_pk)
-        comment_form = CommentForm()
+        selected_post_obj = get_object_or_404(
+            Post.objects.annotate(
+                is_saved=Exists(saved_subquery.filter(post_id=OuterRef('pk'))), # << PŘIDÁNO pro detail
+                is_liked=Exists(liked_subquery.filter(post_id=OuterRef('pk'))), # << PŘIDÁNO pro detail
+                likes_count=Count('likes') # << PŘIDÁNO pro detail
+            ).select_related('author__user').prefetch_related('comments__user'),
+            pk=post_pk
+        )
+        if request.user.is_authenticated:
+            comment_form = CommentForm()
 
     return render(request, 'explore.html', {
-        'posts': posts,
-        'selected_post': selected_post,
+        'posts': posts_query,
+        'selected_post': selected_post_obj,
         'comment_form': comment_form,
     })
 
@@ -438,3 +487,21 @@ def saved_posts_view(request):
         'page_title': 'Uložené příspěvky'
     }
     return render(request, 'saved_posts.html', context)
+
+
+@login_required
+@require_POST
+def toggle_save_post_view(request, post_id):
+    post = get_object_or_404(Post, id=post_id)
+    user = request.user
+    saved_post_entry, created = SavedPost.objects.get_or_create(user=user, post=post)
+
+    if not created:
+        # Příspěvek již byl uložen, takže ho odstraníme (zrušíme uložení)
+        saved_post_entry.delete()
+        is_saved = False
+    else:
+        # Příspěvek nebyl uložen (get_or_create ho právě vytvořil), takže je nyní uložen
+        is_saved = True
+
+    return JsonResponse({'is_saved': is_saved, 'post_id': post.id})
