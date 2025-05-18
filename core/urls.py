@@ -4,16 +4,16 @@ from . import views, api_views
 from .forms import LoginForm
 from .views import feed_view, profile_view, settings_view, create_post_view, add_comment, toggle_like, logout_view
 from django.contrib.auth.views import LogoutView
-
+from core.api import api
 
 urlpatterns = [
+path('api/', api.urls),
     path('', views.feed_view, name='feed'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html', authentication_form=LoginForm), name='login'),
     path('logout/', logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
     path('settings/', views.settings_view, name='settings'),
     path('profile/<str:username>/', profile_view, name='profile'),
-    path('settings/', settings_view, name='settings'),
     path('post/new/', create_post_view, name='create_post'),
     path('post/<int:post_id>/comment/', add_comment, name='add_comment'),
     path('post/<int:post_id>/like/', toggle_like, name='toggle_like'),

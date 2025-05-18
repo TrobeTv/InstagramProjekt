@@ -5,6 +5,7 @@ from .models import Post
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_POST
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -52,3 +53,21 @@ def api_follow_toggle(request, username):
         'followers_count': target_profile.followed_by.count(),
         'following_count': user_profile.following.count(),
     })
+
+
+def api_index(request):
+    routes = [
+        {
+            "endpoint": request.build_absolute_uri(reverse("api-posts-list")),
+            "method": "GET",
+            "description": "Seznam všech příspěvků"
+        },
+        {
+            "endpoint": request.build_absolute_uri(
+                reverse("api-post-detail", kwargs={"post_id": 1})
+            ).replace("/1/", "/<post_id>/"),
+            "method": "GET",
+            "description": "Detail jednoho příspěvku"
+        },
+    ]
+    return JsonResponse(routes, safe=False)
