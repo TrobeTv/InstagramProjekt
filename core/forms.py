@@ -88,3 +88,14 @@ class ProfileForm(forms.ModelForm):
     class Meta:
         model = Profile
         fields = ('bio', 'avatar')
+
+
+class MessageForm(forms.Form):
+    text = forms.CharField(
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Napište zprávu…'
+        }),
+        label='' # Skryjeme label, placeholder je dostatečný
+    )

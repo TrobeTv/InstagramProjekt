@@ -1,95 +1,181 @@
 {% extends 'base.html' %}
+{% load static %} {# Přidáno pro statické soubory, pokud by byly potřeba v modalu #}
+
 {% block title %}{{ profile_user.username }} – Instaclone{% endblock %}
 
 {% block content %}
 <div class="container">
-  <div class="row mb-4">
-    <div class="col-md-3 text-center">
+  <div class="row mb-4 align-items-center"> {# Přidáno align-items-center pro lepší vertikální zarovnání #}
+    <div class="col-md-3 text-center mb-3 mb-md-0"> {# Přidáno mb-3 mb-md-0 pro responzivitu #}
       <img src="{{ profile.avatar.url }}"
            class="rounded-circle img-fluid"
-           style="max-width:150px;"
+           style="max-width:150px; aspect-ratio: 1; object-fit: cover;" {# Přidán styl pro konzistentní velikost avataru #}
            alt="Avatar {{ profile_user.username }}">
     </div>
-    <div class="col-md-6">
-          <h2 class="mb-0">{{ profile_user.username }}</h2>
-          {% if request.user == profile_user %}
-            <a href="{% url 'settings' %}" class="btn btn-outline-light btn-sm">Upravit profil</a>
-          {% endif %}
-          <ul class="list-inline">
-          <strong id="post-count">{{ post_count }}</strong> příspěvků</li>
-          <li class="list-inline-item">
-            <strong id="followers-count">{{ profile.followers.count }}</strong> sledujících
-          </li>
-          <li class="list-inline-item">
-            <strong id="following-count">{{ following_count }}</strong> sleduje
-          </li>
+    <div class="col-md-9"> {# Změněno na col-md-9 pro lepší rozložení #}
+        <div class="d-flex align-items-center mb-2">
+            <h2 class="mb-0 me-3">{{ profile_user.username }}</h2>
+            {% if request.user == profile_user %}
+                <a href="{% url 'settings' %}" class="btn btn-outline-secondary btn-sm">Upravit profil</a>
+            {% elif request.user.is_authenticated %}
+                {# Tlačítko Sledovat/Přestat sledovat s JS logikou, kterou již máte #}
+                {% if is_followed_by_request_user %}
+                    <button id="follow-btn" class="btn btn-sm btn-secondary">Přestat sledovat</button>
+                {% else %}
+                    <button id="follow-btn" class="btn btn-sm btn-primary">Sledovat</button>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <ul class="list-inline d-flex mb-2"> {# Použito d-flex pro zobrazení na jednom řádku #}
+            <li class="list-inline-item me-3"><strong>{{ post_count }}</strong> příspěvků</li>
+            <li class="list-inline-item me-3">
+                <a href="#" data-bs-toggle="modal" data-bs-target="#followersModal" class="text-decoration-none {% if user.profile.dark_mode %}text-white-50{% else %}text-muted{% endif %}">
+                    <strong id="followers-count">{{ followers_count }}</strong> sledujících
+                </a>
+            </li>
+            <li class="list-inline-item">
+                <a href="#" data-bs-toggle="modal" data-bs-target="#followingModal" class="text-decoration-none {% if user.profile.dark_mode %}text-white-50{% else %}text-muted{% endif %}">
+                    <strong id="following-count">{{ following_count }}</strong> sleduje
+                </a>
+            </li>
         </ul>
 
-        {% if request.user.is_authenticated and request.user != profile_user %}
-          {% if profile in request.user.profile.following.all %}
-            <button id="follow-btn" class="btn btn-sm btn-secondary">Unfollow</button>
-          {% else %}
-            <button id="follow-btn" class="btn btn-sm btn-primary">Follow</button>
-          {% endif %}
-        {% endif %}
-
         {% if profile.bio %}
-            <p>{{ profile.bio }}</p>
+            <p class="mb-0">{{ profile.bio }}</p>
         {% endif %}
     </div>
   </div>
 
+    <hr>
     <h4>Příspěvky</h4>
-        <div class="row row-cols-1 row-cols-md-3 g-3">
-          {% for post in posts %}
-            <div class="col">
-              <a href="{% url 'post_detail' post.pk %}">
-                <img src="{{ post.image.url }}" class="img-fluid rounded" alt="Post">
-              </a>
-            </div>
-          {% empty %}
-            <p>Žádné příspěvky.</p>
-          {% endfor %}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3"> {# Použito row-cols-sm-2 pro lepší responzivitu #}
+      {% for post in posts %}
+        <div class="col">
+          <a href="{% url 'post_detail' post.pk %}">
+            <img src="{{ post.image.url }}" class="img-fluid rounded" style="aspect-ratio: 1; object-fit: cover;" alt="Post">
+          </a>
         </div>
-
+      {% empty %}
+        <p>Žádné příspěvky.</p>
+      {% endfor %}
+    </div>
 </div>
+
+{# === Modální okno pro Sledující (Followers) === #}
+<div class="modal fade" id="followersModal" tabindex="-1" aria-labelledby="followersModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content {% if user.profile.dark_mode %}bg-dark text-white{% endif %}">
+      <div class="modal-header">
+        <h5 class="modal-title" id="followersModalLabel">Sledující</h5>
+        <button type="button" class="btn-close {% if user.profile.dark_mode %}btn-close-white{% endif %}" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if followers_list %}
+          <ul class="list-group list-group-flush">
+            {% for p_follower in followers_list %}
+              <li class="list-group-item {% if user.profile.dark_mode %}bg-dark text-white{% endif %} d-flex justify-content-between align-items-center">
+                <a href="{% url 'profile' p_follower.user.username %}" class="text-decoration-none d-flex align-items-center {% if user.profile.dark_mode %}text-white{% else %}text-dark{% endif %}">
+                  <img src="{{ p_follower.avatar.url }}" class="rounded-circle me-2" width="40" height="40" alt="Avatar">
+                  {{ p_follower.user.username }}
+                </a>
+                {# Zde by mohlo být tlačítko Sledovat/Přestat sledovat pro přihlášeného uživatele, pokud by to nebyl on sám #}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>Tohoto uživatele zatím nikdo nesleduje.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# === Modální okno pro Sledované (Following) === #}
+<div class="modal fade" id="followingModal" tabindex="-1" aria-labelledby="followingModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content {% if user.profile.dark_mode %}bg-dark text-white{% endif %}">
+      <div class="modal-header">
+        <h5 class="modal-title" id="followingModalLabel">Sleduje</h5>
+        <button type="button" class="btn-close {% if user.profile.dark_mode %}btn-close-white{% endif %}" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if following_list %}
+          <ul class="list-group list-group-flush">
+            {% for p_followed in following_list %}
+              <li class="list-group-item {% if user.profile.dark_mode %}bg-dark text-white{% endif %} d-flex justify-content-between align-items-center">
+                <a href="{% url 'profile' p_followed.user.username %}" class="text-decoration-none d-flex align-items-center {% if user.profile.dark_mode %}text-white{% else %}text-dark{% endif %}">
+                  <img src="{{ p_followed.avatar.url }}" class="rounded-circle me-2" width="40" height="40" alt="Avatar">
+                  {{ p_followed.user.username }}
+                </a>
+                {# Zde by mohlo být tlačítko Sledovat/Přestat sledovat pro přihlášeného uživatele, pokud by to nebyl on sám #}
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p>Tento uživatel zatím nikoho nesleduje.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
+
 {% block extra_js %}
+{# Váš stávající extra_js blok s JS pro follow/unfollow tlačítko #}
 <script>
-const csrftoken = '{{ csrf_token }}';
-const btn = document.getElementById('follow-btn');
-if (btn) {
-  btn.addEventListener('click', async () => {
-    const username = "{{ profile_user.username }}";
+const csrftoken = '{{ csrf_token }}'; // Předpokládám, že toto máte definované globálněji nebo v base.html, pokud ne, přidejte
+const followBtn = document.getElementById('follow-btn');
+
+if (followBtn) {
+  followBtn.addEventListener('click', async () => {
+    const username = "{{ profile_user.username }}"; // Username profilu, na kterém se nacházíme
+    // Váš stávající fetch kód pro /api/profile/<username>/follow-toggle/ nebo /profile/<username>/follow-toggle/
+    // Předpokládám, že používáte api_views.api_follow_toggle, které má URL name 'api_follow_toggle'
+    // Ujistěte se, že URL je správná. Ve vašich urls.py máte:
+    // path('profile/<str:username>/follow-toggle/', api_views.api_follow_toggle, name='api_follow_toggle'),
+    // Takže URL by měla být:
+    const url = `/profile/${username}/follow-toggle/`; // Upraveno podle vašeho urls.py
+
     const res = await fetch(
-  `/api/profile/${username}/follow-toggle/`,
-  {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': csrftoken,
-      'Content-Type': 'application/json'
-    },
-  }
-);
+      url,
+      {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrftoken, // Ujistěte se, že csrftoken je dostupný
+          'Content-Type': 'application/json'
+        },
+      }
+    );
 
     if (!res.ok) {
-      alert('Chyba při odesílání požadavku');
+      const errorData = await res.json().catch(() => null);
+      alert(`Chyba při odesílání požadavku: ${errorData ? errorData.error : res.statusText}`);
       return;
     }
     const data = await res.json();
+
+    const followersCountElement = document.getElementById('followers-count');
+    // const followingCountElement = document.getElementById('following-count'); // Tento počet se mění pro PŘIHLÁŠENÉHO uživatele, ne pro zobrazený profil
+
     if (data.action === 'followed') {
-      btn.textContent = 'Unfollow';
-      btn.classList.remove('btn-primary');
-      btn.classList.add('btn-secondary');
+      followBtn.textContent = 'Přestat sledovat';
+      followBtn.classList.remove('btn-primary');
+      followBtn.classList.add('btn-secondary');
     } else {
-      btn.textContent = 'Follow';
-      btn.classList.remove('btn-secondary');
-      btn.classList.add('btn-primary');
+      followBtn.textContent = 'Sledovat';
+      followBtn.classList.remove('btn-secondary');
+      followBtn.classList.add('btn-primary');
     }
-    document.getElementById('followers-count').textContent = data.followers_count;
-    document.getElementById('following-count').textContent = data.following_count;
+    // Aktualizujeme počet sledujících zobrazeného profilu
+    if (followersCountElement) {
+        followersCountElement.textContent = data.followers_count;
+    }
+    // Počet sledovaných (following_count) se mění u PŘIHLÁŠENÉHO uživatele, ne u zobrazeného profilu,
+    // takže jeho aktualizace zde by byla relevantní, pokud by se jednalo o profil přihlášeného uživatele.
+    // Pro jednoduchost to teď necháme takto. Správně by se měl aktualizovat i `following_count` na profilu přihlášeného uživatele, pokud by byl zobrazen.
   });
 }
 </script>
 {% endblock %}
-

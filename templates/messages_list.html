@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Zprávy{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">Zprávy</h1>
+
+    {# === Formulář pro vyhledávání uživatelů === #}
+    <form method="get" action="{% url 'messages_list' %}" class="mb-4">
+        <div class="input-group">
+            <input type="text" name="q" class="form-control" placeholder="Hledat uživatele pro novou konverzaci..." value="{{ search_query|default:'' }}">
+            <button class="btn btn-outline-primary" type="submit">
+                <i class="bi bi-search"></i> Hledat
+            </button>
+        </div>
+    </form>
+
+    {# === Zobrazení výsledků vyhledávání === #}
+    {% if search_results is not None %} {# Zkontrolujeme, zda search_results existuje v kontextu #}
+        <h5 class="mb-3">Výsledky hledání pro "{{ search_query }}":</h5>
+        {% if search_results %}
+            <div class="list-group mb-4">
+                {% for user_profile in search_results %}
+                    <a href="{% url 'conversation_detail' username=user_profile.user.username %}" class="list-group-item list-group-item-action d-flex align-items-center">
+                        <img src="{{ user_profile.avatar.url }}"
+                             onerror='this.onerror=null; this.src="{% static "img/default-avatar.png" %}"'
+                             class="rounded-circle me-3"
+                             width="50" height="50"
+                             alt="Avatar uživatele {{ user_profile.user.username }}">
+                        <div>
+                            <strong>{{ user_profile.user.username }}</strong>
+                        </div>
+                    </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="alert alert-warning" role="alert">
+                Pro dotaz "{{ search_query }}" nebyli nalezeni žádní uživatelé.
+            </div>
+        {% endif %}
+        <hr class="my-4">
+        <h5 class="mb-3">Vaše existující kontakty (koho sledujete):</h5>
+    {% endif %}
+
+
+    {# === Seznam sledovaných kontaktů (původní obsah) === #}
+    {% if chat_contacts %}
+        {% if search_results is None %} {# Zobrazíme tento nadpis jen pokud nebylo vyhledávání #}
+        <p>Vyberte uživatele, se kterým chcete zahájit nebo pokračovat v konverzaci:</p>
+        {% endif %}
+        <div class="list-group">
+            {% for contact in chat_contacts %}
+                <a href="{% url 'conversation_detail' username=contact.username %}" class="list-group-item list-group-item-action d-flex align-items-center">
+                    <img src="{{ contact.profile.avatar.url }}"
+                         onerror='this.onerror=null; this.src="{% static "img/default-avatar.png" %}"'
+                         class="rounded-circle me-3"
+                         width="50" height="50"
+                         alt="Avatar uživatele {{ contact.username }}">
+                    <div>
+                        <strong>{{ contact.username }}</strong>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        {# Pokud nebylo aktivní vyhledávání A nejsou žádné kontakty #}
+        {% if search_results is None %}
+        <div class="alert alert-info" role="alert">
+            Zatím nesledujete žádné uživatele. Výsledky vyhledávání se zobrazí zde, nebo najděte nové uživatele v sekci <a href="{% url 'explore' %}" class="alert-link">Procházet</a>!
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

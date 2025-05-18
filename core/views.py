@@ -1,32 +1,50 @@
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User # Nebo settings.AUTH_USER_MODEL
 from django.shortcuts import render, get_object_or_404, redirect
-from django.db.models import Count, Exists, OuterRef
+from django.db.models import Count, Exists, OuterRef, Q
 from django.http import JsonResponse, Http404, HttpResponseForbidden
 from django.contrib.auth import logout, login
-from .forms import PostForm, CommentForm, ProfileForm, RegistrationForm
-from .models import Post, Profile
+from django.views.decorators.http import require_POST
+
+from .forms import PostForm, CommentForm, ProfileForm, RegistrationForm, MessageForm # Ujistěte se, že MessageForm je zde také
+from .models import Post, Profile, Comment, Conversation, Message, SavedPost # << ZDE JE KLÍČOVÝ IMPORT
 
 
+@login_required # <<< PŘIDÁN DEKORÁTOR
 def feed_view(request):
-    posts = Post.objects \
-        .annotate(
-          likes_count=Count('likes'),
-          comments_count=Count('comments'),
-          is_liked=Exists(
-            Post.likes.through.objects.filter(
-              post_id=OuterRef('pk'),
-              user_id=request.user.pk
+    current_user_profile = request.user.profile
+    profiles_i_follow = current_user_profile.following.all() # Profily, které sleduji
+
+    if not profiles_i_follow.exists():
+        # Pokud uživatel nikoho nesleduje, feed bude prázdný
+        posts = Post.objects.none() # Prázdný QuerySet
+    else:
+        # Zobrazí příspěvky pouze od profilů, které uživatel sleduje
+        posts_query = Post.objects.filter(author__in=profiles_i_follow)
+
+        # Chceme také zahrnout vlastní příspěvky uživatele do feedu?
+        # Pokud ano, odkomentujte a upravte následující řádek:
+        # posts_query = Post.objects.filter(
+        # Q(author__in=profiles_i_follow) | Q(author=current_user_profile)
+        # )
+
+        posts = posts_query.annotate(
+            likes_count=Count('likes'),
+            comments_count=Count('comments'),
+            is_liked=Exists(
+                Post.likes.through.objects.filter(
+                    post_id=OuterRef('pk'),
+                    user_id=request.user.pk
+                )
             )
-          )
-        ) \
-        .prefetch_related('comments__user') \
-        .order_by('-created_at')
+        ).prefetch_related('comments__user').select_related('author__user').order_by('-created_at')
+        # Přidáno select_related('author__user') pro optimalizaci načítání autora a jeho usera
 
     comment_form = CommentForm()
     return render(request, 'feed.html', {
         'posts': posts,
         'comment_form': comment_form,
+        'feed_type': 'following', # Můžeme přidat proměnnou pro šablonu, kdybychom chtěli odlišit feed
     })
 
 
@@ -65,20 +83,36 @@ def register_view(request):
 
 def profile_view(request, username):
     profile_user = get_object_or_404(User, username=username)
-    profile = profile_user.profile
+    profile = profile_user.profile  # Toto je Profile objekt zobrazovaného uživatele
     posts = Post.objects.filter(author=profile).order_by('-created_at')
-    followers_count = profile.followers.count()
-    following_count = profile.following.count()
+
+    # Získání seznamů pro modální okna
+    # .select_related('user') optimalizuje dotazy pro přístup k user.username a profile.avatar.url v šabloně
+    followers_profiles = profile.followers.all().select_related('user')  # Profily, které sledují tento 'profile'
+    following_profiles = profile.following.all().select_related('user')  # Profily, které tento 'profile' sleduje
+
+    # Počty (tyto již pravděpodobně máte, ale pro úplnost)
+    followers_count = followers_profiles.count()
+    following_count = following_profiles.count()
     post_count = posts.count()
 
-    return render(request, 'profile.html', {
-        'profile_user': profile_user,
-        'profile': profile,
+    # Zjistíme, zda přihlášený uživatel sleduje zobrazený profil (pokud je přihlášen a není to jeho vlastní profil)
+    is_followed_by_request_user = False
+    if request.user.is_authenticated and request.user != profile_user:
+        is_followed_by_request_user = request.user.profile.following.filter(pk=profile.pk).exists()
+
+    context = {
+        'profile_user': profile_user,  # User objekt zobrazovaného profilu
+        'profile': profile,  # Profile objekt zobrazovaného profilu
         'posts': posts,
+        'post_count': post_count,
         'followers_count': followers_count,
         'following_count': following_count,
-        'post_count': post_count,
-    })
+        'followers_list': followers_profiles,  # << NOVĚ PŘIDÁNO
+        'following_list': following_profiles,  # << NOVĚ PŘIDÁNO
+        'is_followed_by_request_user': is_followed_by_request_user,  # Pro tlačítko Sledovat/Přestat sledovat
+    }
+    return render(request, 'profile.html', context)
 
 
 @login_required
@@ -253,3 +287,154 @@ def delete_post_view(request, pk):
     return render(request, 'post_confirm_delete.html', {
         'post': post,
     })
+
+
+@login_required
+def messages_list_view(request):
+    user_profile = request.user.profile
+    following_profiles = user_profile.following.all()
+    users_i_follow = User.objects.filter(profile__in=following_profiles)
+
+    search_query = request.GET.get('q', None)
+    search_results = None  # Inicializujeme jako None
+
+    if search_query and search_query.strip():  # Pokud je dotaz a není to jen mezera
+        # Vyhledáváme v uživatelských jménech a bio profilech
+        # Chceme vrátit objekty Profile, aby bylo snadné přistupovat k avataru
+        # Vyloučíme sebe sama z výsledků vyhledávání
+        search_results = Profile.objects.filter(
+            Q(user__username__icontains=search_query) |
+            Q(bio__icontains=search_query)  # Volitelně můžete vyhledávat i v bio
+        ).exclude(user=request.user).select_related('user')
+
+    # Pokud je aktivní vyhledávání, `search_results` bude obsahovat QuerySet nebo prázdný QuerySet.
+    # Pokud není aktivní vyhledávání (search_query je None nebo prázdný), `search_results` zůstane None.
+
+    context = {
+        'chat_contacts': users_i_follow,
+        'search_query': search_query,
+        'search_results': search_results,  # Bude None, pokud se nehledalo
+    }
+    return render(request, 'messages_list.html', context)
+
+
+@login_required
+def conversation_detail_view(request, username):
+    other_user = get_object_or_404(User, username=username)
+    current_user = request.user
+
+    if other_user == current_user:
+        # Uživatel nemůže chatovat sám se sebou (můžeme přesměrovat nebo zobrazit chybu)
+        return redirect('messages_list')
+
+    # Pokusíme se najít existující konverzaci mezi těmito dvěma uživateli
+    # Použijeme Q objekty pro nalezení konverzace, kde jsou oba uživatelé účastníky
+    # Je důležité, aby pořadí v ManyToMany poli nehrálo roli, ale jednodušší je často:
+    # 1. Získat konverzace current_user
+    # 2. Z nich vyfiltrovat ty, kde je i other_user
+
+    conversation = Conversation.objects.filter(
+        participants=current_user
+    ).filter(
+        participants=other_user
+    ).first()  # .distinct() by mohl být potřeba, pokud by mohly vzniknout duplicity
+
+    if not conversation:
+        # Pokud konverzace neexistuje, vytvoříme novou
+        conversation = Conversation.objects.create()
+        conversation.participants.add(current_user, other_user)
+        # Není třeba conversation.save() po add, pokud je to nový objekt a save() je volán jinde nebo implicitně
+        # Ale pro jistotu:
+        # conversation.save() # Django >3.2 by to měl zvládnout automaticky s add() na novém objektu
+
+    if request.method == 'POST':
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            message_text = form.cleaned_data['text']
+            Message.objects.create(
+                conversation=conversation,
+                sender=current_user,
+                text=message_text
+            )
+            # Po odeslání zprávy přesměrujeme na tu samou stránku (reload)
+            return redirect('conversation_detail', username=other_user.username)
+    else:
+        form = MessageForm()
+
+    # Načteme zprávy pro tuto konverzaci
+    messages = conversation.messages.all().order_by('created_at')
+
+    # Označit zprávy od other_user jako přečtené (jednoduchá implementace)
+    # messages.filter(sender=other_user, is_read=False).update(is_read=True)
+    # Pokročilejší by bylo označovat jen ty, které jsou viditelné na stránce atd.
+    # Prozatím to necháme bez automatického označování jako přečtené při načtení.
+
+    context = {
+        'other_user': other_user,
+        'conversation': conversation,
+        'messages': messages,
+        'form': form,
+    }
+    return render(request, 'conversation_detail.html', context)
+
+
+@login_required
+def saved_posts_view(request):
+    # Získáme všechny záznamy SavedPost pro aktuálně přihlášeného uživatele.
+    # Použijeme select_related pro optimalizaci dotazů na související objekty Post a jejich autory.
+    # Chceme načíst samotné příspěvky, ne jen záznamy o uložení.
+
+    user_saved_entries = SavedPost.objects.filter(user=request.user).order_by('-saved_at')
+
+    # Získáme seznam ID uložených příspěvků
+    saved_post_ids = user_saved_entries.values_list('post_id', flat=True)
+
+    # Načteme samotné Post objekty, které jsou uložené, a přidáme k nim potřebné anotace
+    # jako pro feed, abychom mohli v šabloně použít stejné komponenty/logiku
+    if request.user.is_authenticated:
+        saved_subquery_for_saved_posts = SavedPost.objects.filter(
+            post_id=OuterRef('pk'),
+            user_id=request.user.pk
+        )
+        liked_subquery_for_saved_posts = Post.likes.through.objects.filter(
+            post_id=OuterRef('pk'),
+            user_id=request.user.pk
+        )
+    else:  # Pro případ, že by view nebylo @login_required, i když zde je
+        saved_subquery_for_saved_posts = SavedPost.objects.none()
+        liked_subquery_for_saved_posts = Post.likes.through.objects.none()
+
+    saved_posts_list = Post.objects.filter(pk__in=saved_post_ids).annotate(
+        likes_count=Count('likes'),
+        comments_count=Count('comments'),
+        is_liked=Exists(liked_subquery_for_saved_posts),
+        is_saved=Exists(saved_subquery_for_saved_posts)  # Zde by is_saved mělo být vždy True, ale pro konzistenci
+    ).select_related('author__user').prefetch_related('comments__user')
+
+    # Seřadíme podle toho, jak byly uloženy (od nejnovějšího)
+    # To je trochu složitější, protože původní řazení bylo na SavedPost.
+    # Můžeme je seřadit v Pythonu po načtení, nebo načíst `SavedPost` objekty a iterovat přes ně v šabloně.
+    # Pro jednoduchost zatím necháme řazení podle `Post.created_at` nebo `pk`, nebo můžeme iterovat `user_saved_entries`
+    # a přistupovat k `entry.post`.
+    # Použijeme druhou, jednodušší variantu pro zachování pořadí uložení:
+
+    # Nahrazujeme `saved_posts_list` tímto, abychom zachovali pořadí uložení
+    # a stále měli anotované post objekty.
+    # Toto je komplexnější, zjednodušme to prozatím a vraťme se k tomu v případě potřeby.
+    # Prozatím zobrazíme `saved_posts_list` seřazené podle data vytvoření příspěvku.
+    # Chceme-li řadit podle data uložení, musíme iterovat `user_saved_entries` v šabloně
+    # a pro každý `entry` přistupovat k `entry.post` (a anotace by se musely řešit jinak nebo pro každý post zvlášť).
+
+    # Zjednodušená verze (řadí podle data vytvoření příspěvku, ne data uložení):
+    saved_posts_list = saved_posts_list.order_by('-created_at')  # Nebo jiné řazení pro Post
+
+    # Alternativa: Předat user_saved_entries do šablony a v šabloně iterovat a přistupovat k entry.post.
+    # Pak by se anotace musely přidávat individuálně nebo by se nepoužívaly.
+    # Pro zobrazení jako v explore (mřížka obrázků), nepotřebujeme hned všechny anotace.
+
+    context = {
+        # 'saved_entries': user_saved_entries, # Možnost 1: iterovat toto a brát entry.post
+        'saved_posts': saved_posts_list,  # Možnost 2: iterovat toto (již anotované Post objekty)
+        'page_title': 'Uložené příspěvky'
+    }
+    return render(request, 'saved_posts.html', context)

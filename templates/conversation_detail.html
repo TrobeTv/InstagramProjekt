@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+
+{% block title %}Konverzace s {{ other_user.username }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="mb-0">Konverzace s {{ other_user.username }}</h1>
+        <a href="{% url 'messages_list' %}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left"></i> Zpět na seznam
+        </a>
+    </div>
+
+    <div class="chat-window mb-3 p-3 border rounded {% if user.profile.dark_mode %}bg-dark text-white border-secondary{% else %}bg-light{% endif %}" style="height: 400px; overflow-y: auto;">
+        {% for message in messages %}
+            <div class="message mb-2 d-flex {% if message.sender == request.user %}justify-content-end{% endif %}">
+                <div class="message-bubble p-2 rounded {% if message.sender == request.user %}bg-primary text-white{% else %}bg-secondary text-white{% endif %}" style="max-width: 70%;">
+                    {% if message.sender != request.user %}
+                        <small class="fw-bold d-block">{{ message.sender.username }}</small>
+                    {% endif %}
+                    <p class="mb-0">{{ message.text }}</p>
+                    <small class="message-time text-white-50 d-block text-end" style="font-size: 0.75em;">
+                        {{ message.created_at|date:"d.m H:i" }}
+                    </small>
+                </div>
+            </div>
+        {% empty %}
+            <p class="text-center text-muted">Žádné zprávy v této konverzaci. Napište první!</p>
+        {% endfor %}
+    </div>
+
+    <form method="post" class="d-flex">
+        {% csrf_token %}
+        <div class="flex-grow-1 me-2">
+            {{ form.text }}
+        </div>
+        <button type="submit" class="btn btn-primary">Odeslat</button>
+    </form>
+</div>
+
+<style>
+    /* Pro lepší vizuální oddělení, můžete tyto styly přesunout do vašeho style.css */
+    .chat-window {
+        display: flex;
+        flex-direction: column;
+    }
+    .message-bubble {
+        word-wrap: break-word;
+    }
+</style>
+
+{% endblock %}

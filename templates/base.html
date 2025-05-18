@@ -29,31 +29,42 @@
       <div class="row">
         <!-- SIDEBAR -->
         <nav class="col-2 sidebar p-0">
-          <ul class="nav flex-column mt-4">
-            <li class="nav-item mb-3">
-              <div class="instagram-logo ps-3">Instagram</div>
-            </li>
-            <li class="nav-item"><a class="nav-link" href="{% url 'feed' %}">Domů</a></li>
-          <li class="nav-item">
-              <a class="nav-link" href="{% url 'explore' %}">Procházet</a>
-          </li>
-            <!-- …ostatní položky… -->
-            {% if user.is_authenticated %}
-                <li class="nav-item">
-                  <a class="nav-link" href="{% url 'profile' user.username %}">Profil</a>
+  <ul class="nav flex-column mt-4">
+    <li class="nav-item mb-3">
+      <div class="instagram-logo ps-3">Instagram</div>
+    </li>
+    <li class="nav-item"><a class="nav-link" href="{% url 'feed' %}">Domů</a></li>
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'explore' %}">Procházet</a>
+    </li>
+    {% if user.is_authenticated %}
+        <li class="nav-item">  {# << NOVÁ POLOŽKA ZPRÁVY #}
+            <a class="nav-link" href="{% url 'messages_list' %}">Zprávy</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="{% url 'profile' user.username %}">Profil</a>
+        </li>
+    {% endif %}
+     <li class="nav-item"> {# << NOVÁ POLOŽKA PRO ULOŽENÉ #}
+                    <a class="nav-link" href="{% url 'saved_posts' %}">
+                        <i class="bi bi-bookmark-fill me-2"></i>Uložené
+                    </a>
                 </li>
-                {% endif %}
-          <li class="nav-item">
-              <a class="nav-link" href="{% url 'create_post' %}">Vytvořit</a>
-          </li>
-          <li class="nav-item">
-              <a class="nav-link" href="{% url 'settings' %}">Nastavení</a>
-          </li>
-          <li class="nav-item mt-4">
-              <a class="nav-link text-danger" href="{% url 'logout' %}">Odhlásit se</a>
-          </li>
-          </ul>
-        </nav>
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'create_post' %}">Vytvořit</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link" href="{% url 'settings' %}">Nastavení</a>
+    </li>
+    <li class="nav-item mt-4">
+        {# Zde je Váš kód pro odhlášení, který jste zmínil dříve, že máte upravený #}
+        {# Předpokládám, že máte něco jako: #}
+        {% if user.is_authenticated %}
+        <a class="nav-link text-danger" href="{% url 'logout' %}">Odhlásit se</a>
+        {% endif %}
+    </li>
+  </ul>
+</nav>
         <!-- začátek hlavního obsahu -->
         <main class="col-10 pt-4">
   {% endif %}

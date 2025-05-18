@@ -27,5 +27,8 @@ path('api/', api.urls),
     path('explore/<int:post_pk>/', views.explore_view, name='explore_post'),
     path('explore/search/', views.explore_search_view, name='explore_search'),
     path('post/<int:pk>/delete/', views.delete_post_view, name='delete_post'),
+path('messages/', views.messages_list_view, name='messages_list'),
+    path('messages/<str:username>/', views.conversation_detail_view, name='conversation_detail'),
+path('post/<int:post_id>/toggle-save/', views.toggle_save_post_view, name='toggle_save_post'),
 
 ]
