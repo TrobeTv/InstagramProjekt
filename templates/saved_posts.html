@@ -12,23 +12,17 @@
             {% for post in saved_posts %}
                 <div class="col">
                     <div class="card h-100 shadow-sm">
-                        {# Odkaz na detail příspěvku #}
                         <a href="{% url 'post_detail' post.pk %}" class="text-decoration-none">
                             <img src="{{ post.image.url }}"
                                  class="card-img-top"
                                  alt="Uložený příspěvek {{ post.caption|truncatechars:20 }}"
                                  style="aspect-ratio: 1; object-fit: cover;">
                         </a>
-                        
-                        {# Volitelně můžete přidat malý popisek nebo autora pod obrázek, pokud chcete více info v mřížce #}
                         <div class="card-body p-2">
                             <p class="card-text small text-muted">
                                 Od: <a href="{% url 'profile' post.author.user.username %}" class="text-decoration-none">{{ post.author.user.username }}</a>
                             </p>
                         </div>
-
-                        {# Ikonka záložky pro případné zrušení uložení přímo odsud (pokročilejší) #}
-                        {# Prozatím necháme jen zobrazení. Funkci zrušení uložení lze provést na detailu příspěvku. #}
                         <div class="card-footer bg-transparent border-top-0 p-2 text-end">
                              <a href="javascript:void(0);" class="toggle-save-btn text-decoration-none {% if user.profile.dark_mode %}text-white-50{% else %}text-muted{% endif %}" data-post-id="{{ post.id }}">
                                 <i class="bi {% if post.is_saved %}bi-bookmark-fill{% else %}bi-bookmark{% endif %} fs-5"></i>
@@ -47,22 +41,15 @@
 {% endblock %}
 
 {% block extra_js %}
-{# Pokud chcete, aby i zde fungovalo dynamické rušení uložení, přidejte JS kód pro .toggle-save-btn #}
-{# Tento kód je stejný jako ten, který jsme připravovali pro feed.html atd. #}
-{# Pokud jste ho dali do base.html, měl by fungovat automaticky. #}
-{# Pokud ne, zkopírujte ho sem: #}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const csrftokenSaved = '{{ csrf_token }}'; // Nebo getCookie('csrftoken');
+        const csrftokenSaved = '{{ csrf_token }}';
 
         document.querySelectorAll('.toggle-save-btn').forEach(button => {
             button.addEventListener('click', async () => {
                 const postId = button.dataset.postId;
                 if (!postId) return;
-                
                 const url = `/post/${postId}/toggle-save/`;
-                // const url = "{% url 'toggle_save_post' 0 %}".replace('0', postId);
-                
                 try {
                     const response = await fetch(url, {
                         method: 'POST',
@@ -86,8 +73,6 @@
                     } else {
                         icon.classList.remove('bi-bookmark-fill');
                         icon.classList.add('bi-bookmark');
-                        // Volitelně: Odebrat příspěvek ze stránky uložených, pokud byl "odznačkován"
-                        // button.closest('.col').remove(); // Toto by odstranilo celý sloupec s příspěvkem
                     }
                 } catch (error) {
                     console.error('Došlo k chybě:', error);

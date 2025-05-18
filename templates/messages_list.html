@@ -6,8 +6,6 @@
 {% block content %}
 <div class="container py-4">
     <h1 class="mb-4">Zprávy</h1>
-
-    {# === Formulář pro vyhledávání uživatelů === #}
     <form method="get" action="{% url 'messages_list' %}" class="mb-4">
         <div class="input-group">
             <input type="text" name="q" class="form-control" placeholder="Hledat uživatele pro novou konverzaci..." value="{{ search_query|default:'' }}">
@@ -16,9 +14,7 @@
             </button>
         </div>
     </form>
-
-    {# === Zobrazení výsledků vyhledávání === #}
-    {% if search_results is not None %} {# Zkontrolujeme, zda search_results existuje v kontextu #}
+    {% if search_results is not None %}
         <h5 class="mb-3">Výsledky hledání pro "{{ search_query }}":</h5>
         {% if search_results %}
             <div class="list-group mb-4">
@@ -44,10 +40,8 @@
         <h5 class="mb-3">Vaše existující kontakty (koho sledujete):</h5>
     {% endif %}
 
-
-    {# === Seznam sledovaných kontaktů (původní obsah) === #}
     {% if chat_contacts %}
-        {% if search_results is None %} {# Zobrazíme tento nadpis jen pokud nebylo vyhledávání #}
+        {% if search_results is None %}
         <p>Vyberte uživatele, se kterým chcete zahájit nebo pokračovat v konverzaci:</p>
         {% endif %}
         <div class="list-group">
@@ -65,7 +59,6 @@
             {% endfor %}
         </div>
     {% else %}
-        {# Pokud nebylo aktivní vyhledávání A nejsou žádné kontakty #}
         {% if search_results is None %}
         <div class="alert alert-info" role="alert">
             Zatím nesledujete žádné uživatele. Výsledky vyhledávání se zobrazí zde, nebo najděte nové uživatele v sekci <a href="{% url 'explore' %}" class="alert-link">Procházet</a>!

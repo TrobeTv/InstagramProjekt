@@ -46,7 +46,7 @@
                                 {% endfor %}
                               </div>
 
-                              {#like, komentáře, sdílení #}
+                              {#like, komentář, sdílení #}
                               <div class="d-flex align-items-center mb-2">
                                 <form action="{% url 'toggle_like' post.pk %}" method="post" class="me-3">
                                   {% csrf_token %}
@@ -56,13 +56,11 @@
                                 </form>
                                 <span>{{ likes_count }}</span>
                                 <div class="ms-auto">
-    <a href="javascript:void(0);" class="text-decoration-none toggle-save-btn" data-post-id="{{ post.id }}">
-        <i class="bi {% if post.is_saved %}bi-bookmark-fill{% else %}bi-bookmark{% endif %} fs-4"></i>
-    </a>
-</div>
+                                    <a href="javascript:void(0);" class="text-decoration-none toggle-save-btn" data-post-id="{{ post.id }}">
+                                        <i class="bi {% if post.is_saved %}bi-bookmark-fill{% else %}bi-bookmark{% endif %} fs-4"></i>
+                                    </a>
+                                </div>
                               </div>
-
-                                  {# form pro komentář #}
                                   <form action="" method="post" class="d-flex">
                                       {% csrf_token %}
                                       {{ comment_form.text }}

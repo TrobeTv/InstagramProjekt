@@ -22,49 +22,67 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body class="{% if user.is_authenticated and user.profile.dark_mode %}dark-mode{% endif %}">
-
-  {% comment %} Otevřu si wrapper jen když nejsem na /login/ nebo /register/ {% endcomment %}
   {% if request.path != '/login/' and request.path != '/register/' %}
     <div class="container-fluid">
       <div class="row">
         <!-- SIDEBAR -->
         <nav class="col-2 sidebar p-0">
-  <ul class="nav flex-column mt-4">
-    <li class="nav-item mb-3">
-      <div class="instagram-logo ps-3">Instagram</div>
-    </li>
-    <li class="nav-item"><a class="nav-link" href="{% url 'feed' %}">Domů</a></li>
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'explore' %}">Procházet</a>
-    </li>
-    {% if user.is_authenticated %}
-        <li class="nav-item">  {# << NOVÁ POLOŽKA ZPRÁVY #}
-            <a class="nav-link" href="{% url 'messages_list' %}">Zprávy</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'profile' user.username %}">Profil</a>
-        </li>
-    {% endif %}
-     <li class="nav-item"> {# << NOVÁ POLOŽKA PRO ULOŽENÉ #}
-                    <a class="nav-link" href="{% url 'saved_posts' %}">
-                        <i class="bi bi-bookmark-fill me-2"></i>Uložené
+          <ul class="nav flex-column mt-4">
+            <li class="nav-item mb-3">
+              <div class="instagram-logo ps-3">Instagram</div>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'feed' %}">
+                    <i class="bi bi-house-door-fill me-2"></i>Domů
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'explore' %}">
+                    <i class="bi bi-compass-fill me-2"></i>Procházet
+                </a>
+            </li>
+            {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'notifications_list' %}">
+                        <i class="bi bi-bell-fill me-2"></i>Oznámení
+                        {# Sem později přidáme počítadlo nepřečtených #}
                     </a>
                 </li>
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'create_post' %}">Vytvořit</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'settings' %}">Nastavení</a>
-    </li>
-    <li class="nav-item mt-4">
-        {# Zde je Váš kód pro odhlášení, který jste zmínil dříve, že máte upravený #}
-        {# Předpokládám, že máte něco jako: #}
-        {% if user.is_authenticated %}
-        <a class="nav-link text-danger" href="{% url 'logout' %}">Odhlásit se</a>
-        {% endif %}
-    </li>
-  </ul>
-</nav>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'messages_list' %}">
+                        <i class="bi bi-send-fill me-2"></i>Zprávy
+                    </a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'profile' user.username %}">
+                      <i class="bi bi-person-circle me-2"></i>Profil
+                  </a>
+                </li>
+            {% endif %}
+             <li class="nav-item">
+                <a class="nav-link" href="{% url 'saved_posts' %}">
+                    <i class="bi bi-bookmark-fill me-2"></i>Uložené
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'create_post' %}">
+                    <i class="bi bi-plus-square-fill me-2"></i>Vytvořit
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'settings' %}">
+                    <i class="bi bi-gear-fill me-2"></i>Nastavení
+                </a>
+            </li>
+            <li class="nav-item mt-auto mb-3">
+                {% if user.is_authenticated %}
+                <a class="nav-link text-danger" href="{% url 'logout' %}">
+                    <i class="bi bi-box-arrow-right me-2"></i>Odhlásit se
+                </a>
+                {% endif %}
+            </li>
+          </ul>
+        </nav>
         <!-- začátek hlavního obsahu -->
         <main class="col-10 pt-4">
   {% endif %}
@@ -98,42 +116,32 @@ document.getElementById('logout-btn').addEventListener('click', async e => {
 
   {% block extra_js %}
 <script>
-// Uvnitř base.html, v bloku extra_js
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM fully loaded and parsed'); // Test 1
+    console.log('DOM fully loaded and parsed');
     const csrftoken = '{{ csrf_token }}';
-    console.log('CSRF Token:', csrftoken); // Test 2
+    console.log('CSRF Token:', csrftoken);
 
     document.querySelectorAll('.toggle-save-btn').forEach(button => {
-        console.log('Found a toggle-save-btn:', button); // Test 3
+        console.log('Found a toggle-save-btn:', button);
         button.addEventListener('click', async (event) => {
             event.preventDefault();
-            console.log('Save button clicked!'); // Test 4
+            console.log('Save button clicked!');
             const postId = button.dataset.postId;
-            console.log('Post ID:', postId); // Test 5
+            console.log('Post ID:', postId);
             if (!postId) return;
-
-            // Dynamické sestavení URL pro toggle_save_post
-            // Předpokládá, že máte URL s názvem 'toggle_save_post'
-            // a že Django URL resolver je dostupný v JS (což typicky není přímo)
-            // Bezpečnější je použít fixní prefix a přidat ID, nebo předat URL z Django
-            // Zde použijeme fixní cestu, jak bylo naznačeno v saved_posts.html
             const url = `/post/${postId}/toggle-save/`;
-            // Alternativně, pokud byste měli URL definovanou v šabloně pro JS:
-            // const url = "{% url 'toggle_save_post' 0 %}".replace('0', postId);
-
-
-            try {
+            try
+            {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': csrftoken,
-                        'Content-Type': 'application/json', // Není nutné pro tento typ požadavku, ale nevadí
+                        'Content-Type': 'application/json',
                     },
-                    // Pro GET_OR_CREATE na serveru není potřeba posílat body
                 });
 
-                if (!response.ok) {
+                if (!response.ok)
+                {
                     console.error('Chyba při (zrušení) ukládání příspěvku:', response.statusText);
                     const errorData = await response.json().catch(() => null);
                     alert(`Chyba: ${errorData ? errorData.error : response.statusText}`);
@@ -143,30 +151,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
                 const icon = button.querySelector('i');
 
-                if (data.is_saved) {
+                if (data.is_saved)
+                {
                     icon.classList.remove('bi-bookmark');
                     icon.classList.add('bi-bookmark-fill');
-                } else {
+                }
+                else
+                {
                     icon.classList.remove('bi-bookmark-fill');
                     icon.classList.add('bi-bookmark');
-
-                    // Pokud jsme na stránce uložených příspěvků a příspěvek byl odebrán z uložených,
-                    // můžeme ho vizuálně odstranit ze stránky.
-                    if (window.location.pathname.includes('/saved/')) { // Upravte cestu, pokud je jiná
-                        const postCard = button.closest('.col'); // Nebo jiný rodičovský element příspěvku
+                    if (window.location.pathname.includes('/saved/'))
+                    {
+                        const postCard = button.closest('.col');
                         if (postCard) {
                             postCard.remove();
                         }
                     }
                 }
-            } catch (error) {
+            } catch (error)
+            {
                 console.error('Došlo k chybě při komunikaci se serverem:', error);
                 alert('Došlo k chybě. Zkuste to prosím znovu.');
             }
         });
     });
-
-    // Váš existující JavaScript pro like, komentáře atd. může zůstat zde nebo být také refaktorován
 });
 </script>
 {% endblock %}

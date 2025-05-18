@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Instagram{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h1 class="mb-4">{{ page_title }}</h1>
+
+    {% if notifications %}
+        <ul class="list-group notification-list">
+            {% for notification in notifications %}
+                <li class="list-group-item notification-item {% if not notification.read %}notification-unread{% else %}notification-read{% endif %} d-flex align-items-start py-3">
+                    <div class="flex-shrink-0 me-3">
+                        {% if notification.actor and notification.actor.profile.avatar %}
+                            <img src="{{ notification.actor.profile.avatar.url }}"
+                                 class="rounded-circle"
+                                 width="50" height="50"
+                                 alt="Avatar {{ notification.actor.username }}">
+                        {% else %}
+                            <img src="{% static 'img/default_avatar.png' %}"
+                                 class="rounded-circle"
+                                 width="50" height="50"
+                                 alt="Default Avatar">
+                        {% endif %}
+                    </div>
+
+                    <div class="flex-grow-1">
+                        <p class="mb-1 notification-text">
+                            {% if notification.actor %}
+                                <a href="{% url 'profile' notification.actor.username %}" class="fw-bold text-decoration-none">{{ notification.actor.username }}</a>
+                            {% else %}
+                                <span class="fw-bold">Systém</span>
+                            {% endif %}
+                            {{ notification.verb }}
+                            {% if notification.target %}
+                                {% if notification.target_content_type.model == 'post' and notification.target.pk %}
+                                    <a href="{% url 'post_detail' notification.target.pk %}" class="text-decoration-none">
+                                        "{{ notification.target.caption|truncatewords:5|default:'příspěvek' }}"
+                                    </a>.
+                                {% elif notification.target_content_type.model == 'profile' and notification.target.user.username %}
+                                    <a href="{% url 'profile' notification.target.user.username %}" class="text-decoration-none">
+                                       profilu {{ notification.target.user.username }}
+                                    </a>.
+                                {% else %}
+                                    objektu.
+                                {% endif %}
+                            {% endif %}
+                        </p>
+                        <small class="text-muted notification-timestamp">{{ notification.timestamp|timesince }} ago</small>
+                    </div>
+
+                    {% if not notification.read %}
+                        <span class="badge bg-primary rounded-pill ms-auto align-self-center">Nové</span>
+                    {% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <div class="alert alert-info mt-3" role="alert">
+            Zatím nemáte žádná oznámení.
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    .notification-unread {
+        background-color: #e7f3ff;
+    }
+    .notification-item {
+        border-bottom: 1px solid #eee;
+    }
+    .notification-item:last-child {
+        border-bottom: none;
+    }
+    .notification-text a {
+        color: #0d6efd;
+    }
+    .notification-text a:hover {
+        text-decoration: underline;
+    }
+</style>
+
+{% endblock %}

@@ -1,24 +1,23 @@
 {% extends 'base.html' %}
-{% load static %} {# Přidáno pro statické soubory, pokud by byly potřeba v modalu #}
+{% load static %}
 
 {% block title %}{{ profile_user.username }} – Instaclone{% endblock %}
 
 {% block content %}
 <div class="container">
-  <div class="row mb-4 align-items-center"> {# Přidáno align-items-center pro lepší vertikální zarovnání #}
-    <div class="col-md-3 text-center mb-3 mb-md-0"> {# Přidáno mb-3 mb-md-0 pro responzivitu #}
+  <div class="row mb-4 align-items-center">
+    <div class="col-md-3 text-center mb-3 mb-md-0">
       <img src="{{ profile.avatar.url }}"
            class="rounded-circle img-fluid"
-           style="max-width:150px; aspect-ratio: 1; object-fit: cover;" {# Přidán styl pro konzistentní velikost avataru #}
+           style="max-width:150px; aspect-ratio: 1; object-fit: cover;"
            alt="Avatar {{ profile_user.username }}">
     </div>
-    <div class="col-md-9"> {# Změněno na col-md-9 pro lepší rozložení #}
+    <div class="col-md-9">
         <div class="d-flex align-items-center mb-2">
             <h2 class="mb-0 me-3">{{ profile_user.username }}</h2>
             {% if request.user == profile_user %}
                 <a href="{% url 'settings' %}" class="btn btn-outline-secondary btn-sm">Upravit profil</a>
             {% elif request.user.is_authenticated %}
-                {# Tlačítko Sledovat/Přestat sledovat s JS logikou, kterou již máte #}
                 {% if is_followed_by_request_user %}
                     <button id="follow-btn" class="btn btn-sm btn-secondary">Přestat sledovat</button>
                 {% else %}
@@ -27,7 +26,7 @@
             {% endif %}
         </div>
 
-        <ul class="list-inline d-flex mb-2"> {# Použito d-flex pro zobrazení na jednom řádku #}
+        <ul class="list-inline d-flex mb-2">
             <li class="list-inline-item me-3"><strong>{{ post_count }}</strong> příspěvků</li>
             <li class="list-inline-item me-3">
                 <a href="#" data-bs-toggle="modal" data-bs-target="#followersModal" class="text-decoration-none {% if user.profile.dark_mode %}text-white-50{% else %}text-muted{% endif %}">
@@ -49,7 +48,7 @@
 
     <hr>
     <h4>Příspěvky</h4>
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3"> {# Použito row-cols-sm-2 pro lepší responzivitu #}
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
       {% for post in posts %}
         <div class="col">
           <a href="{% url 'post_detail' post.pk %}">
@@ -62,7 +61,6 @@
     </div>
 </div>
 
-{# === Modální okno pro Sledující (Followers) === #}
 <div class="modal fade" id="followersModal" tabindex="-1" aria-labelledby="followersModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content {% if user.profile.dark_mode %}bg-dark text-white{% endif %}">
@@ -79,7 +77,6 @@
                   <img src="{{ p_follower.avatar.url }}" class="rounded-circle me-2" width="40" height="40" alt="Avatar">
                   {{ p_follower.user.username }}
                 </a>
-                {# Zde by mohlo být tlačítko Sledovat/Přestat sledovat pro přihlášeného uživatele, pokud by to nebyl on sám #}
               </li>
             {% endfor %}
           </ul>
@@ -91,7 +88,6 @@
   </div>
 </div>
 
-{# === Modální okno pro Sledované (Following) === #}
 <div class="modal fade" id="followingModal" tabindex="-1" aria-labelledby="followingModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-scrollable">
     <div class="modal-content {% if user.profile.dark_mode %}bg-dark text-white{% endif %}">
@@ -108,7 +104,6 @@
                   <img src="{{ p_followed.avatar.url }}" class="rounded-circle me-2" width="40" height="40" alt="Avatar">
                   {{ p_followed.user.username }}
                 </a>
-                {# Zde by mohlo být tlačítko Sledovat/Přestat sledovat pro přihlášeného uživatele, pokud by to nebyl on sám #}
               </li>
             {% endfor %}
           </ul>
@@ -123,27 +118,22 @@
 {% endblock %}
 
 {% block extra_js %}
-{# Váš stávající extra_js blok s JS pro follow/unfollow tlačítko #}
+
 <script>
-const csrftoken = '{{ csrf_token }}'; // Předpokládám, že toto máte definované globálněji nebo v base.html, pokud ne, přidejte
+const csrftoken = '{{ csrf_token }}';
 const followBtn = document.getElementById('follow-btn');
 
 if (followBtn) {
   followBtn.addEventListener('click', async () => {
-    const username = "{{ profile_user.username }}"; // Username profilu, na kterém se nacházíme
-    // Váš stávající fetch kód pro /api/profile/<username>/follow-toggle/ nebo /profile/<username>/follow-toggle/
-    // Předpokládám, že používáte api_views.api_follow_toggle, které má URL name 'api_follow_toggle'
-    // Ujistěte se, že URL je správná. Ve vašich urls.py máte:
-    // path('profile/<str:username>/follow-toggle/', api_views.api_follow_toggle, name='api_follow_toggle'),
-    // Takže URL by měla být:
-    const url = `/profile/${username}/follow-toggle/`; // Upraveno podle vašeho urls.py
+    const username = "{{ profile_user.username }}";
+    const url = `/profile/${username}/follow-toggle/`;
 
     const res = await fetch(
       url,
       {
         method: 'POST',
         headers: {
-          'X-CSRFToken': csrftoken, // Ujistěte se, že csrftoken je dostupný
+          'X-CSRFToken': csrftoken,
           'Content-Type': 'application/json'
         },
       }
@@ -157,8 +147,6 @@ if (followBtn) {
     const data = await res.json();
 
     const followersCountElement = document.getElementById('followers-count');
-    // const followingCountElement = document.getElementById('following-count'); // Tento počet se mění pro PŘIHLÁŠENÉHO uživatele, ne pro zobrazený profil
-
     if (data.action === 'followed') {
       followBtn.textContent = 'Přestat sledovat';
       followBtn.classList.remove('btn-primary');
@@ -168,13 +156,9 @@ if (followBtn) {
       followBtn.classList.remove('btn-secondary');
       followBtn.classList.add('btn-primary');
     }
-    // Aktualizujeme počet sledujících zobrazeného profilu
     if (followersCountElement) {
         followersCountElement.textContent = data.followers_count;
     }
-    // Počet sledovaných (following_count) se mění u PŘIHLÁŠENÉHO uživatele, ne u zobrazeného profilu,
-    // takže jeho aktualizace zde by byla relevantní, pokud by se jednalo o profil přihlášeného uživatele.
-    // Pro jednoduchost to teď necháme takto. Správně by se měl aktualizovat i `following_count` na profilu přihlášeného uživatele, pokud by byl zobrazen.
   });
 }
 </script>

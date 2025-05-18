@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 class Profile(models.Model):
     user     = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -28,7 +30,6 @@ class Post(models.Model):
     image = models.ImageField(upload_to='posts/')
     caption = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    # předpokládám, že lajky máš jako M2M:
     likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked_posts', blank=True)
 
 class Comment(models.Model):
@@ -48,7 +49,6 @@ class Conversation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        # Jednoduchá textová reprezentace, můžeme vylepšit
         usernames = ", ".join([user.username for user in self.participants.all()])
         return f"Conversation between {usernames}"
 
@@ -76,9 +76,41 @@ class SavedPost(models.Model):
     saved_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        # Zajišťuje, že uživatel si nemůže stejný příspěvek uložit vícekrát
         unique_together = ('user', 'post')
         ordering = ['-saved_at']
 
     def __str__(self):
         return f"{self.user.username} saved '{self.post.caption[:20]}...'"
+
+
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True, related_name='triggered_notifications')
+    verb = models.CharField(max_length=255)
+    read = models.BooleanField(default=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    content_type_target = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True, related_name='notification_target')
+    object_id_target = models.PositiveIntegerField(null=True, blank=True)
+    target = GenericForeignKey('content_type_target', 'object_id_target')
+    content_type_action_object = models.ForeignKey(ContentType, on_delete=models.CASCADE, null=True, blank=True, related_name='notification_action_object')
+    object_id_action_object = models.PositiveIntegerField(null=True, blank=True)
+    action_object = GenericForeignKey('content_type_action_object', 'object_id_action_object')
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        if self.target:
+            return f'{self.actor} {self.verb} your {self.target._meta.model_name if self.target else "something"}'
+        return f'{self.actor} {self.verb}'
+
+    def mark_as_read(self):
+        if not self.read:
+            self.read = True
+            self.save()
+
+    def mark_as_unread(self):
+        if self.read:
+            self.read = False
+            self.save()

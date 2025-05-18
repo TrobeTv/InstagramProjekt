@@ -7,7 +7,7 @@ from django.contrib.auth.views import LogoutView
 from core.api import api
 
 urlpatterns = [
-path('api/', api.urls),
+    path('api/', api.urls),
     path('', views.feed_view, name='feed'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html', authentication_form=LoginForm), name='login'),
     path('logout/', logout_view, name='logout'),
@@ -27,9 +27,9 @@ path('api/', api.urls),
     path('explore/<int:post_pk>/', views.explore_view, name='explore_post'),
     path('explore/search/', views.explore_search_view, name='explore_search'),
     path('post/<int:pk>/delete/', views.delete_post_view, name='delete_post'),
-path('messages/', views.messages_list_view, name='messages_list'),
+    path('messages/', views.messages_list_view, name='messages_list'),
     path('messages/<str:username>/', views.conversation_detail_view, name='conversation_detail'),
-path('saved/', views.saved_posts_view, name='saved_posts'), # Přidáno/Odkomenováno
-    path('post/<int:post_id>/toggle-save/', views.toggle_save_post_view, name='toggle_save_post'), # Tato cesta by již měla existovat
-
+    path('saved/', views.saved_posts_view, name='saved_posts'),
+    path('post/<int:post_id>/toggle-save/', views.toggle_save_post_view, name='toggle_save_post'),
+    path('notifications/', views.notification_list_view, name='notifications_list'),
 ]
